@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from math import isfinite
 from numbers import Integral, Real
 from pathlib import Path
+from threading import current_thread, main_thread
 from time import perf_counter
 from typing import Any
 
@@ -110,12 +111,10 @@ def run_simulation(
                 state = simulator.get_team_state(team_id)
                 started = perf_counter()
                 try:
-                    with (
-                        _agent_random_context(agent_random_states[team_id]),
-                        _decision_timeout(config.agents.decide_timeout_ms),
-                    ):
-                        decision = agent.decide(
-                            state=state, goods_config=goods_configs[team_id]
+                    with _agent_random_context(agent_random_states[team_id]):
+                        decision = _decide_with_timeout(
+                            agent, state, goods_configs[team_id],
+                            config.agents.decide_timeout_ms,
                         )
                     _validate_decision(decision, state, goods_configs[team_id])
                     decisions[team_id] = decision
@@ -261,7 +260,7 @@ def _agent_random_context(state: _AgentRandomState) -> Iterator[None]:
 
 @contextmanager
 def _decision_timeout(timeout_ms: float) -> Iterator[None]:
-    """Interrupt a synchronous agent call after ``timeout_ms`` milliseconds."""
+    """Interrupt a synchronous agent call using a Unix interval timer."""
     previous_handler = signal.getsignal(signal.SIGALRM)
     deadline = perf_counter() + timeout_ms / 1_000.0
 
@@ -279,6 +278,53 @@ def _decision_timeout(timeout_ms: float) -> Iterator[None]:
             signal.setitimer(signal.ITIMER_REAL, *previous_timer)
     if perf_counter() >= deadline:
         raise DecisionTimeout
+
+
+def _decide_with_timeout(
+    agent: BaseAgent,
+    state: Observation,
+    goods_config: GoodsConfig,
+    timeout_ms: float,
+) -> Decision:
+    """Use signals where available, otherwise check deadlines while tracing Python.
+
+    The fallback interrupts Python loops, but blocking I/O and native code can
+    only be rejected once execution returns to Python. Keep the call in this
+    frame so tracing cannot interrupt context-manager setup or cleanup.
+
+    Args:
+        agent (BaseAgent): Agent whose decision is requested.
+        state (Observation): Public observation for the current turn.
+        goods_config (GoodsConfig): Goods and recipe configuration.
+        timeout_ms (float): Positive decision deadline in milliseconds.
+
+    Returns:
+        Decision: The agent's decision, before action validation.
+
+    Raises:
+        DecisionTimeout: The decision exceeds its deadline.
+    """
+    if hasattr(signal, "setitimer") and current_thread() is main_thread():
+        with _decision_timeout(timeout_ms):
+            return agent.decide(state=state, goods_config=goods_config)
+
+    previous_trace = sys.gettrace()
+    deadline = perf_counter() + timeout_ms / 1_000.0
+
+    def check_deadline(frame, event, arg):
+        """Interrupt Python execution when the decision deadline expires."""
+        if perf_counter() >= deadline:
+            raise DecisionTimeout
+        return check_deadline
+
+    sys.settrace(check_deadline)
+    try:
+        decision = agent.decide(state=state, goods_config=goods_config)
+    finally:
+        sys.settrace(previous_trace)
+    if perf_counter() >= deadline:
+        raise DecisionTimeout
+    return decision
 
 
 def _validate_decision(

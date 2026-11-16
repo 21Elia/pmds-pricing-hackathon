@@ -58,9 +58,11 @@ cd pmds-pricing-hackathon
 uv sync --locked --python 3.12
 ```
 
-Python 3.11–3.13 is supported; uv can download Python 3.12. The current runner
-uses Unix-only timeout functions, so native Windows Python cannot run agent
-decisions correctly. Windows users can use WSL, Codespaces, or a Linux container.
+Python 3.11–3.13 is supported; uv can download Python 3.12. Native Windows,
+Linux, and macOS are supported. On Windows, decision deadlines are checked while
+executing Python code; blocking I/O and native-library calls are checked when
+they return to Python. This adds tracing overhead, so local timing can differ
+from the Unix evaluator. WSL, Codespaces, and Linux containers remain alternatives.
 
 <details>
 <summary>Need Git or uv? Installation commands by operating system</summary>
@@ -81,7 +83,14 @@ xcode-select --install
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**Windows with WSL** — if needed, install Ubuntu from PowerShell as Administrator:
+**Windows (PowerShell)** — install Git and uv, then reopen PowerShell:
+
+```powershell
+winget install --id Git.Git -e
+winget install --id astral-sh.uv -e
+```
+
+**Windows with WSL (optional)** — install Ubuntu from PowerShell as Administrator:
 
 ```powershell
 wsl --install -d Ubuntu
@@ -219,7 +228,7 @@ Before uploading, check:
   the constructor and use dependencies available in the evaluator; uploads
   cannot install packages.
 - Portal validation tests three default-scenario turns. Decisions have a
-  **10 ms** deadline; validation has a **10-second** wall-clock deadline and a
+  **100 ms** deadline; validation has a **10-second** wall-clock deadline and a
   CPU allowance. Errors or timeouts reject the upload.
 
 Local scores are experiment results, not official competition scores. In
@@ -495,7 +504,7 @@ This runs seeds 100, 101, and 102 for each scenario: six simulations with up to
 three workers. Fresh agents are constructed for each run. Outputs aggregate
 each scenario into mean curves with standard-error bands. Keep team IDs and
 roster order consistent when comparing seeded results. Use `--profile` on a
-single run to inspect decision timing against the 10 ms default deadline.
+single run to inspect decision timing against the 100 ms default deadline.
 
 ### 3.4 Results and recordings
 
@@ -530,7 +539,7 @@ must not read them.
 | Built-in opponents missing | Use the supplied scenarios without a custom `--agents-dir`; place your agents under the default root in section 1.3. |
 | Duplicate ID | Give each agent bundle a unique folder name; the Python class name does not set its ID. |
 | Agent takes no actions | Add `--ui none` to show warnings and tracebacks. Exceptions, malformed decisions, and timeouts cause empty fallback decisions. |
-| Window unavailable | Use the environment guidance in section 3.2. Native Windows needs a Unix environment for the current timeout implementation. |
+| Window unavailable | Use the environment guidance in section 3.2; `--ui none` runs without a graphical window. |
 | Upload rejected | Check every Python helper and the full submission rules; exclude caches and unaccepted file types. |
 | Portal URL missing | Use the link supplied by the organizers; local tests are available before it opens. |
 | Poor results | Inspect auction, sales, and inventory charts, then compare more seeds. A single local score is not an official ranking. |

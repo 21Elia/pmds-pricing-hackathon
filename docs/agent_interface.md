@@ -137,4 +137,9 @@ Quantities must be non-negative integers; prices must be finite, non-negative
 numbers. A bid may win fewer units than requested, and production and listings
 are limited by the inventory actually available when their phases run. An
 exception, invalid decision, or timeout produces an empty decision for that
-turn. The default `agents.decide_timeout_ms` is 10 ms.
+turn. The default `agents.decide_timeout_ms` is 100 ms.
+
+On native Windows, the local runner checks this deadline using Python tracing.
+Python loops can be interrupted; blocking I/O and native-library calls can only
+be checked when they return to Python. Tracing adds overhead, so timing may
+differ from the Unix evaluator, which uses an interval timer.
