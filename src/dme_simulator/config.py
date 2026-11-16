@@ -96,7 +96,7 @@ class AgentSpec:
 @dataclass(frozen=True, slots=True)
 class AgentsConfig:
     directory: str = "src/dme_simulator/agents"
-    decide_timeout_ms: float = 10.0
+    decide_timeout_ms: float = 100.0
     observe_all_transactions: bool = False
     include: list[AgentSpec] = field(default_factory=list)
 

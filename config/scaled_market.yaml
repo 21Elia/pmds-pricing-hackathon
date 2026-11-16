@@ -123,7 +123,7 @@ goods:
 
 agents:
   directory: src/dme_simulator/agents
-  decide_timeout_ms: 10.0
+  decide_timeout_ms: 100.0
   observe_all_transactions: false
 
 output:
