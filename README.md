@@ -119,7 +119,7 @@ Create a subfolder for each agent under
 
 ```text
 pmds-pricing-hackathon/                 # run commands here
-  essential_README.md
+  README.md
   pyproject.toml
   config/
   src/
