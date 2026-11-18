@@ -35,11 +35,12 @@ STYLES = ("fixed", "undercut", "highprice", "overbid", "hoarder", "dumper",
 
 class Rival(BaseAgent):
     def __init__(self, style: str = "fixed", seed: int = 0, markup: float | None = None,
-                 units: int | None = None):
+                 units: int | None = None, bid_mult: float | None = None):
         self.style = style if style in STYLES else "fixed"
         self.rng = random.Random(zlib.crc32(f"{style}:{seed}".encode()))
         self.markup = markup
         self.units = units
+        self.bid_mult_override = bid_mult
         self.price = {}
         self.sales_idx = 0
         self.auct_idx = 0
@@ -131,6 +132,8 @@ class Rival(BaseAgent):
             bid_mult = self.rng.uniform(1.0, 1.8)
         self.price = dict(price)
 
+        if self.bid_mult_override is not None:
+            bid_mult = self.bid_mult_override
         # demand per good: build to `units` held
         need = {g: max(0, units - state.inventory.get(g, 0)) for g in goods}
         raw = {}

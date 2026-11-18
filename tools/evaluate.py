@@ -125,21 +125,29 @@ def lineup(rng: random.Random, kind: str, n_crowd: int, cands):
                 opp.append((f"R{i}_{st}", str(RIVAL), {"style": st, "seed": rng.randrange(999)}))
     elif kind == "portal":
         opp = portal_field(rng, 41 - len(cands))
+    elif kind == "portal_hard":
+        opp = portal_field(rng, 41 - len(cands), hard=True)
     return opp
 
 
 AGENTS_DIR = ROOT / "src/dme_simulator/agents"
 
 
-def portal_field(rng: random.Random, n: int):
+def portal_field(rng: random.Random, n: int, hard: bool = False):
     """Approximation of the official portal tournament (41 teams in ONE default market,
     18 Nov leaderboard): 3 baselines, ~6 idle teams (exactly 12,000), a few strong teams,
     the rest mediocre agents that mostly lose a little money."""
     opp = [(b, str(BUILTIN / b), {}) for b in ["DummyAgent", "PatientAgent", "PriceWarAgent"]]
     opp += [(f"idle{i}", str(BUILTIN / "PatientAgent"), {}) for i in range(6)]
-    strong = [d for d in ["tight_v2", "tight_v3", "tight_v4", "davide_v3"] if (AGENTS_DIR / d / "agent.py").exists()]
-    opp += [(f"strong_{d}", str(AGENTS_DIR / d), {}) for d in strong]
+    strong = [AGENTS_DIR / d for d in ["tight_v2", "tight_v3", "tight_v4", "tight_v5", "tight_v6", "davide_v3"]]
+    strong += [ROOT / "tools/candidates" / d for d in ["elia_fix", "elia_fix2"]]
+    opp += [(f"strong_{d.name}", str(d), {}) for d in strong if (d / "agent.py").exists()]
     i = 0
+    if hard:   # aggressive auction field: many teams pay 3-6x the reserve for materials
+        for j in range(18):
+            opp.append((f"H{j}", str(RIVAL), {"style": rng.choice(["fixed", "highprice", "valuebid"]),
+                                              "seed": rng.randrange(999), "bid_mult": rng.uniform(3.0, 6.0),
+                                              "units": rng.randint(2, 5)}))
     while len(opp) < n:
         st = rng.choice(STYLES)
         opp.append((f"R{i}_{st}", str(RIVAL), {"style": st, "seed": rng.randrange(999)}))
@@ -208,6 +216,10 @@ def main():
             scen = "default" if i % 2 == 0 else "default_extended_waves"
             jobs.append((f"portal:{scen}", (load_raw(scen), lineup(rng, "portal", 0, cands),
                                             cands, rng.randrange(10**6))))
+    if "hard" in suites:   # default.yaml, 41 teams, aggressive bidders (calibrated on the portal)
+        for i in range(args.n):
+            jobs.append(("hard:default", (load_raw("default"), lineup(rng, "portal_hard", 0, cands),
+                                          cands, rng.randrange(10**6))))
     if "random" in suites:
         for i in range(args.n):
             jobs.append(("random", (random_market(rng), lineup(rng, "league", 0, cands),

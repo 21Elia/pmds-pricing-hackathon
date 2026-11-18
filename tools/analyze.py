@@ -27,9 +27,9 @@ import evaluate as ev  # noqa: E402
 
 def field(kind, agent_path, seed=0):
     A = ROOT / "src/dme_simulator/agents"
-    if kind == "portal":    # 41 teams in one default market, like the official leaderboard
+    if kind in ("portal", "hard"):    # 41 teams in one market, like the official leaderboard
         import random
-        return ev.portal_field(random.Random(seed), 40)
+        return ev.portal_field(random.Random(seed), 40, hard=(kind == "hard"))
     if kind == "small":     # the local default roster
         return [("Dummy", str(ev.BUILTIN / "DummyAgent"), {}), ("Patient", str(ev.BUILTIN / "PatientAgent"), {}),
                 ("PriceWar", str(ev.BUILTIN / "PriceWarAgent"), {})]
