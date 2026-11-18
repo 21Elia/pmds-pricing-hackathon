@@ -24,19 +24,26 @@ class ZooAgent(BaseAgent):
     markup_hi = {hi}
     stock = {stock}
     split = {split}
+    start_turn = {start_turn}     # do nothing before this turn
+    crazy_turns = {crazy_turns}   # first turns: bid crazy_mult * reserve for crazy_stock of everything
+    crazy_mult = {crazy_mult}
+    crazy_stock = {crazy_stock}
 
     def __init__(self):
         self.rng = random.Random({seed})
 
     def decide(self, state: Observation, goods_config: GoodsConfig) -> Decision:
         gc = goods_config
+        if state.turn < self.start_turn:
+            return Decision()
+        crazy = state.turn <= self.crazy_turns
         lots = {{lot.good: lot for lot in state.auction_lots}}
         cost = {{m: lots[m].reserve_price * self.bid_mult if m in lots else 10.0 for m in gc.raw_materials}}
         inv = dict(state.inventory)
         want = {{m: 0 for m in gc.raw_materials}}
         assembly = []
         for name, rec in gc.recipes.items():
-            need = max(0, self.stock - inv.get(rec.output_good, 0))
+            need = max(0, (self.crazy_stock if crazy else self.stock) - inv.get(rec.output_good, 0))
             assembly.append(AssemblyOrder(name, need))
             for m, q in rec.inputs.items():
                 want[m] += q * need
@@ -44,7 +51,7 @@ class ZooAgent(BaseAgent):
         for m, lot in lots.items():
             q = min(lot.quantity, max(0, want.get(m, 0) - inv.get(m, 0)))
             if q > 0:
-                bids.append(Bid(m, q, lot.reserve_price * self.bid_mult))
+                bids.append(Bid(m, q, lot.reserve_price * (self.crazy_mult if crazy else self.bid_mult)))
         listings = []
         for name, rec in gc.recipes.items():
             g = rec.output_good
@@ -86,15 +93,35 @@ def random_zoo(n: int, seed: int = 7) -> dict:
     return out
 
 
+# Archetypes seen on the portal leaderboard: idle teams, late starters, and
+# teams that spend almost everything in the first turns.
+PORTAL_EXTRA = {
+    "zoo_idle1": dict(bid_mult=1.0, lo=1.0, hi=1.0, stock=0, split=False, start_turn=999),
+    "zoo_idle2": dict(bid_mult=1.0, lo=1.0, hi=1.0, stock=0, split=False, start_turn=999),
+    "zoo_late1": dict(bid_mult=1.2, lo=3.0, hi=3.0, stock=2, split=False, start_turn=10),
+    "zoo_late2": dict(bid_mult=1.5, lo=2.5, hi=4.0, stock=3, split=False, start_turn=13),
+    "zoo_late3": dict(bid_mult=1.1, lo=5.0, hi=5.0, stock=1, split=False, start_turn=7),
+    "zoo_crazy1": dict(bid_mult=2.0, lo=3.0, hi=6.0, stock=3, split=False, crazy_turns=3, crazy_mult=12.0, crazy_stock=40),
+    "zoo_crazy2": dict(bid_mult=1.5, lo=4.0, hi=8.0, stock=3, split=False, crazy_turns=2, crazy_mult=6.0, crazy_stock=25),
+    # strong early players, like the portal leaders: big buys in the first turns
+    "zoo_early_a": dict(bid_mult=1.5, lo=5.0, hi=8.0, stock=2, split=False, crazy_turns=3, crazy_mult=8.0, crazy_stock=12),
+    "zoo_early_b": dict(bid_mult=1.3, lo=3.0, hi=9.0, stock=3, split=False, crazy_turns=4, crazy_mult=6.0, crazy_stock=20),
+    "zoo_early_c": dict(bid_mult=2.0, lo=4.0, hi=6.0, stock=4, split=True, crazy_turns=5, crazy_mult=5.0, crazy_stock=10),
+    "zoo_crazy3": dict(bid_mult=3.0, lo=2.0, hi=3.0, stock=5, split=True, crazy_turns=4, crazy_mult=4.0, crazy_stock=15),
+}
+DEFAULTS = dict(start_turn=0, crazy_turns=0, crazy_mult=1.0, crazy_stock=0)
+
+
 def main() -> None:
     import sys
     if OUT.exists():
         shutil.rmtree(OUT)
     zoo = dict(ZOO)
     zoo.update(random_zoo(int(sys.argv[1]) if len(sys.argv) > 1 else 14))
+    zoo.update(PORTAL_EXTRA)
     for i, (name, p) in enumerate(zoo.items()):
         (OUT / name).mkdir(parents=True)
-        (OUT / name / "agent.py").write_text(TEMPLATE.format(seed=i, **p))
+        (OUT / name / "agent.py").write_text(TEMPLATE.format(seed=i, **{**DEFAULTS, **p}))
     print(f"written {len(zoo)} zoo agents")
 
 

@@ -1,4 +1,4 @@
-"""Tight v1: adaptive bidding, margin-ranked production, per-unit price ladder.
+"""Tight v3 (= v1 + aggressive opening): adaptive bidding, margin-ranked production, per-unit price ladder.
 
 Ideas:
 - Pay-your-bid auction: bid just above what wins. Per material we keep a
@@ -28,18 +28,24 @@ class TightAgent(BaseAgent):
     explore_turns = 6           # wider ladder and faster moves early on
     step_up = 0.07
     step_down = 0.15
-    min_markup = 4.0            # never list below replacement cost * this (avoids price wars)
+    min_markup = 1.3            # never list below material cost * this
     # --- stock and production ---
-    min_stock = 6
+    min_stock = 2
     max_stock = 30
-    cover_turns = 4.0           # target stock = sales rate * cover + min_stock
+    cover_turns = 3.0           # target stock = sales rate * cover + min_stock
     # --- bidding ---
     bid_start = 1.5            # first bid = reserve * this
     bid_up = 1.5
     bid_down = 0.94
     value_share = 0.8          # max bid per material unit = share of product value
     budget_share = 0.8          # max share of capital committed per turn
-    max_bid_mult = 2.5          # never bid more than reserve * this
+    # --- opening: in the first turns few teams have goods, so be first to market ---
+    max_bid_mult = 4.0       # never bid more than reserve * this
+    open_turns = 5
+    open_stock = 6              # minimum stock target per good during the opening
+    open_bid = 3.0              # bid at least reserve * this during the opening
+    early_low = 0.75            # price ladder during the exploration turns
+    early_high = 1.6
 
     def __init__(self) -> None:
         self.me: str | None = None
@@ -108,12 +114,11 @@ class TightAgent(BaseAgent):
                 continue
             sold_prices.setdefault(tx.good, []).extend([tx.price] * tx.quantity)
 
-        # replacement cost of each material: what a new unit costs now (the reserve).
-        # What we already paid is sunk and must not hold prices up.
-        for m in gc.raw_materials:
-            if m in lots:
-                self.unit_cost[m] = lots[m].reserve_price
-        mat_cost = {m: self.unit_cost.get(m, 1.0) for m in gc.raw_materials}
+        # material cost estimates (what we pay, else the reserve)
+        mat_cost = {
+            m: self.unit_cost.get(m, lots[m].reserve_price if m in lots else 1.0)
+            for m in gc.raw_materials
+        }
         # cheapest recipe per finished good
         recipe_for: dict[str, str] = {}
         good_cost: dict[str, float] = {}
@@ -152,7 +157,8 @@ class TightAgent(BaseAgent):
         # --- production plan -------------------------------------------------
         target = {
             g: int(min(self.max_stock,
-                       round(self.sales_rate[g] * self.cover_turns) + self.min_stock))
+                       round(self.sales_rate[g] * self.cover_turns)
+                       + (max(self.min_stock, self.open_stock) if turn <= self.open_turns else self.min_stock)))
             for g in gc.finished_goods
         }
         margin = {g: self.ref_price[g] - good_cost.get(g, 0.0) for g in gc.finished_goods}
@@ -205,6 +211,8 @@ class TightAgent(BaseAgent):
                 if m in rec.inputs:
                     cap = max(cap, self.value_share * self.ref_price[g] / sum(rec.inputs.values()))
             level = self.bid_level.get(m, lot.reserve_price * self.bid_start)
+            if turn <= self.open_turns:
+                level = max(level, lot.reserve_price * self.open_bid)
             price = max(lot.reserve_price * 1.001, level)
             price = min(price, lot.reserve_price * self.max_bid_mult)
             if cap > 0:
@@ -219,7 +227,7 @@ class TightAgent(BaseAgent):
         # --- listings: one unit per listing on a ladder ------------------------
         listings = []
         self.last_ladder = {}
-        low, high = (0.75, 1.6) if early else (self.ladder_low, self.ladder_high)
+        low, high = (self.early_low, self.early_high) if early else (self.ladder_low, self.ladder_high)
         for g in gc.finished_goods:
             planned = inv.get(g, 0) + need.get(g, 0)
             if planned <= 0:
