@@ -5,3 +5,6 @@ __pycache__/
 .ruff_cache/
 outputs/
 
+
+# generated sparring copies (tools/make_sparring.py)
+sparring/
