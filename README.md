@@ -38,15 +38,16 @@ same project; you do not need to complete both setups.
 
 #### Option A — Codespaces: work in your browser
 
-Use this option to work without installing Git, uv, or Python on your computer.
+Use this option to work without installing Git, uv, or Python on your computer. You will not be able to run optional graphical visualizations using the simulator window UI.
 On your fork, select **Code → Codespaces → Create codespace on main**. Wait
-for setup to finish, then open this guide in the editor and use the integrated
-terminal. Python 3.12, uv, and project dependencies are installed automatically.
-Stop the Codespace when you finish.
+for setup to finish, then open this guide in the editor. To open the integrated
+terminal, select **Terminal → New Terminal** from the editor's menu.
+Python 3.12, uv, and project dependencies are installed automatically.
+Stop the Codespace when you finish (at the end of the hackathon).
 
 **Once setup finishes, skip Option B and continue to section 1.3.**
 
-#### Option B — Local clone: work on your computer
+#### Option B — Local clone: work on your computer (RECOMMENDED)
 
 Use this option if you prefer your own editor and terminal. Install Git and uv
 using the expandable instructions below if needed. Replace `YOUR-USERNAME`
@@ -67,7 +68,8 @@ from the Unix evaluator. WSL, Codespaces, and Linux containers remain alternativ
 <details>
 <summary>Need Git or uv? Installation commands by operating system</summary>
 
-**Ubuntu / Debian** — install Git and download tools, then run uv's installer:
+**Ubuntu / Debian** — open a terminal and run these commands to install Git,
+download tools, and uv:
 
 ```bash
 sudo apt-get update
@@ -75,47 +77,46 @@ sudo apt-get install -y git curl ca-certificates
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**macOS** — install Apple's command-line tools for Git, finish the installation
-dialog, then install uv. Skip tools that are already installed:
+**macOS** — open the Terminal app. Run the first command to install Apple's
+command-line tools for Git and finish the installation dialog. Then run the
+second command in the terminal to install uv. Skip tools that are already
+installed:
 
 ```bash
 xcode-select --install
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**Windows (PowerShell)** — install Git and uv, then reopen PowerShell:
+**Windows (PowerShell)** — open a PowerShell terminal and run these commands
+to install Git and uv, then close and reopen PowerShell:
 
 ```powershell
 winget install --id Git.Git -e
 winget install --id astral-sh.uv -e
 ```
 
-**Windows with WSL (optional)** — install Ubuntu from PowerShell as Administrator:
 
-```powershell
-wsl --install -d Ubuntu
-```
-
-Restart if prompted, open Ubuntu, create its Linux account, and run the Ubuntu
-commands above there. Keep the clone and simulation commands in the Ubuntu
-terminal.
-
-After installing tools, reopen the terminal and check `git --version` and
-`uv --version`. For other Linux distributions or installation methods, see the
+After installing tools, reopen the terminal and run `git --version` and
+`uv --version` to check that both tools are available. For other Linux
+distributions or installation methods, see the
 official [Git](https://git-scm.com/install/) and
 [uv](https://docs.astral.sh/uv/getting-started/installation/) instructions.
 
 </details>
 
-**After either option**, continue to section 1.3. Run all subsequent commands
-from the repository root: the `pmds-pricing-hackathon/` folder containing
-`pyproject.toml`, `config/`, and `src/`.
+**After either option**, continue to section 1.3. Run all remaining terminal
+commands from the **repository root**: the `pmds-pricing-hackathon/` folder
+containing `pyproject.toml`, `config/`, and `src/`. In Codespaces, the terminal
+normally opens in this folder. With a local clone, the `cd` command above puts
+you there. Paths in the commands below are relative to this folder.
 
 ### 1.3 Create your agent
 
-Create a subfolder for each agent under
+In your editor, open the `pmds-pricing-hackathon/` project folder. Create a
+subfolder for each agent under
 **`pmds-pricing-hackathon/src/dme_simulator/agents/`**. Put that agent's
-`agent.py`, optional Python helpers, and optional models inside its folder:
+`agent.py`, optional Python helpers, and optional models inside its folder.
+The example below shows the folder structure:
 
 ```text
 pmds-pricing-hackathon/                 # run commands here
@@ -128,17 +129,18 @@ pmds-pricing-hackathon/                 # run commands here
         base.py                       # leave existing simulator files unchanged
         loader.py
         builtin_bundles/              # supplied opponents; leave unchanged
-        your-team-name/               # create one folder per agent
+        your-agent-name/              # create one folder per agent
           agent.py
           strategy.py                 # optional
           models/                     # optional
 ```
 
-Create the folder in the Explorer or with
-`mkdir -p src/dme_simulator/agents/your-agent-name`.
+Use your editor's file explorer to create a folder such as `your-agent-name`
+inside `src/dme_simulator/agents/`. Create a file named `agent.py` inside it.
 You can create multiple agents by creating multiple folders.
 The simulator discovers agents here automatically, including all experimental
-agent folders you leave in this directory. Put this starter in `agent.py`:
+agent folders you leave in this directory. Paste the following Python code
+into `agent.py` in your editor, then save the file:
 
 ```python
 from dme_simulator.agents import (
@@ -172,8 +174,9 @@ actions. The starter checks the setup; you should improve its strategy.
 
 ### 1.4 Check that it runs
 
-From the repository root, first check syntax and discovery. Replace
-`your-agent-name` in the syntax-check path with your agent's folder name:
+In the terminal, from the repository root, run these commands one at a time
+to check syntax and discovery. Replace `your-agent-name` in the first command
+with your agent's folder name:
 
 ```bash
 uv run python -m compileall -q src/dme_simulator/agents/your-agent-name
@@ -183,7 +186,7 @@ uv run dme-sim --list-agents
 Discovery should list your folder ID alongside the built-in agents. It imports
 agent modules but does not construct agents or run turns.
 
-Then run a short simulation:
+Then, in the same terminal, run this command to start a short simulation:
 
 ```bash
 uv run dme-sim --turns 5
@@ -195,9 +198,17 @@ should see **four teams**. The run prints capital and stock through turn 5 and
 saves three dashboard PNGs in `outputs/default/`. No agent-path argument is
 needed.
 
-For a graphical run, add `--ui window --turn-delay 0.5` to the command. It starts paused at turn 0. Press **Space** or click **Play** to begin. On a terminal, use `--ui terminal`; add a delay to follow each turn.
-Redirected terminal output falls back to plain progress. `--ui none` runs
-without a live dashboard. Batch runs skip the live UI.
+To watch the simulation in the terminal, run:
+
+```bash
+uv run dme-sim --turns 5 --ui terminal --turn-delay 0.5
+```
+
+For a graphical window on your computer (**not available in codespaces**). run in the terminal:
+
+```bash
+uv run dme-sim --turns 5 --ui window --turn-delay 0.5
+``` 
 
 Now edit your strategy and rerun. Check [testing reference](#3-testing-reference)
 when you want the window UI, a longer run, or comparisons across seeds.
@@ -205,16 +216,21 @@ when you want the window UI, a longer run, or comparisons across seeds.
 ### 1.5 Submit your agent
 
 Open the page at the **link provided by the organizers**, log in, and upload
-your tested bundle as a folder or a single ZIP. The URL will be announced;
+your agent folder as a folder or a single ZIP. The URL will be announced;
 check validation status and official results on that page. Only the latest
-submission before the deadline counts for scoring. Git commits and pull
-requests to this repository are not submissions.
+submission before the deadline counts for scoring.
 
-**Official scoring:** each match ranks agents by their final capital (cash),
-highest first. Inventory adds no value to the score. Overall standings use the
-arithmetic mean of each agent's ranks across its official matches; a lower
-average rank is better. For example, ranks 1, 2, and 3 give an average rank of
-2.
+**For teams that use Codespace**, create a new folder in **your local system**, 
+then download each file **separately** from the Codespace and save it in that folder.
+Finally, upload the folder or a ZIP of it to the submission portal. 
+
+**Official scoring:** the final evaluation will include multiple matches across
+several different private scenarios, which are not shared with participants.
+These scenarios test how well agents perform under different market conditions.
+Each match ranks agents by their final capital (cash), highest first. Inventory
+adds no value to the score. Overall rankings use the arithmetic mean of each
+agent's ranks across its official matches; a lower average rank is better.
+For example, ranks 1, 2, and 3 give an average rank of 2.
 
 Before uploading, check:
 
@@ -425,7 +441,8 @@ configured starting stock. Goods not listed there start at zero.
 
 ### 3.1 Options and configurations
 
-Add or change options on the command in [section 1.4](#14-check-that-it-runs).
+In the terminal, add or change options on the `uv run dme-sim` command in
+[section 1.4](#14-check-that-it-runs).
 Omit `--turns 5` to use a scenario's full duration. Scenarios are described in
 [section 2.7](#27-configuration-and-analytics); keep the official files unchanged
 when comparing agents.
@@ -453,12 +470,21 @@ must be unique. With the supplied scenarios, every discovered bundle competes
 and no path arguments are needed. For a different roster, `--agents-dir PATH`
 replaces the search root (repeat for several roots); `--extra-agent PATH` adds
 a bundle stored elsewhere. Do not append a bundle already in the default root.
-These overrides are optional; `uv run dme-sim --help` describes their syntax.
+These overrides are optional. To see their syntax, run
+`uv run dme-sim --help` in the terminal.
 
 ### 3.2 Using the UI
 
-For a graphical run, add `--ui window --turn-delay 0.5` to the smoke command. It starts paused at turn 0. Press **Space** or click **Play**
-to begin. On a terminal, use `--ui terminal`; add a delay to follow each turn.
+To open a graphical window on your computer (**not available in Codespaces**), run this command in the terminal
+from the repository root:
+
+```bash
+uv run dme-sim --turns 5 --ui window --turn-delay 0.5
+```
+
+The window starts paused at turn 0. Press **Space** or click **Play** to begin.
+To watch in the terminal instead, replace `--ui window` with `--ui terminal`
+in the command and run it in the terminal.
 Redirected terminal output falls back to plain progress. `--ui none` runs
 without a live dashboard. Batch runs skip the live UI.
 
@@ -486,18 +512,16 @@ graphical UI is possible with an added browser desktop such as
 [desktop-lite/noVNC](https://github.com/devcontainers/features/tree/main/src/desktop-lite),
 which is not included in the current configuration. You can also download a
 recording and replay it locally. Press H/F1 in the viewer for the scrollable
-guide, or run `uv run dme-sim --guide` to read it in the terminal.
+guide, or run `uv run dme-sim --guide` in the terminal to read it there.
 
 ### 3.3 Comparing seeds and scenarios
 
 Before choosing a strategy, compare it across multiple seeds and both full
-market scenarios. For example:
+market scenarios. For example, run this command in the terminal from the
+repository root. Enter it as one line so it also works in PowerShell:
 
 ```bash
-uv run dme-sim \
-  --config config/default.yaml --config config/scaled_market.yaml \
-  --simulations 3 --turns 30 --seed 100 --max-workers 3 \
-  --output-dir outputs/comparison
+uv run dme-sim --config config/default.yaml --config config/scaled_market.yaml --simulations 3 --turns 30 --seed 100 --max-workers 3 --output-dir outputs/comparison
 ```
 
 This runs seeds 100, 101, and 102 for each scenario: six simulations with up to
@@ -516,13 +540,20 @@ With plot rendering enabled in the scenario, the chosen output directory gets:
 | `*_dashboard_auction.png` | Reserve and winning prices, offered materials, fill rates, and units won. |
 | `*_dashboard_sales.png` | Units sold, listed/realized prices, unserved customers, and unsold stock. |
 
-To save a run for later viewing, add bare `--record` to a single-run command.
+To save a run for later viewing, run this command in the terminal from the
+repository root:
+
+```bash
+uv run dme-sim --turns 5 --record
+```
+
 It creates `outputs/recordings/<timestamp>/simulation.jsonl` and prints a
 copyable replay command. `--output-dir` controls plots, not this recording path.
 Alternatively, pass an explicit file with an existing parent directory;
 recording refuses to overwrite files. Batches cannot be recorded.
 
-Run the printed `uv run dme-sim --replay PATH` command on a graphical desktop.
+To view the recording, run the printed `uv run dme-sim --replay PATH` command
+in a terminal on your computer (**not available in Codespaces**).
 Replay needs neither your agent nor the original scenario, produces no new
 plots, and uses the same window controls. It accepts only `--ui window` and
 `--turn-delay` alongside `--replay`. Recordings are spectator data; your agent
@@ -532,8 +563,8 @@ must not read them.
 
 | Problem | Check |
 | --- | --- |
-| Tool not found | Reopen the terminal after installation; check `git --version` and `uv --version`. |
-| Unsupported Python | Use the Python 3.12 sync command in section 1.2. |
+| Tool not found | Reopen the terminal after installation, then run `git --version` and `uv --version` there. |
+| Unsupported Python | In the terminal, run the Python 3.12 sync command in section 1.2. |
 | Codespace disconnects during rebuild | Reconnect after the container restarts and setup finishes. |
 | Agent fails to load | The specified folder must contain `agent.py`, defining exactly one concrete agent callable without arguments. |
 | Built-in opponents missing | Use the supplied scenarios without a custom `--agents-dir`; place your agents under the default root in section 1.3. |
