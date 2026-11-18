@@ -21,6 +21,8 @@ FIELDS = {
             "--extra", "sparring_zoo"],
     "nozoo": [],
     "auction": ["--config", "config/tutorial_auction.yaml"],
+    # guess of the portal's default_extended: 240 turns, 40k capital, ~400 customers/turn
+    "ext": ["--config", "config/local_ext_demand.yaml", "--extra", "sparring_zoo"],
 }
 
 
