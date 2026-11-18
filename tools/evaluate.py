@@ -123,7 +123,28 @@ def lineup(rng: random.Random, kind: str, n_crowd: int, cands):
             else:
                 st = rng.choice(STYLES)
                 opp.append((f"R{i}_{st}", str(RIVAL), {"style": st, "seed": rng.randrange(999)}))
+    elif kind == "portal":
+        opp = portal_field(rng, 41 - len(cands))
     return opp
+
+
+AGENTS_DIR = ROOT / "src/dme_simulator/agents"
+
+
+def portal_field(rng: random.Random, n: int):
+    """Approximation of the official portal tournament (41 teams in ONE default market,
+    18 Nov leaderboard): 3 baselines, ~6 idle teams (exactly 12,000), a few strong teams,
+    the rest mediocre agents that mostly lose a little money."""
+    opp = [(b, str(BUILTIN / b), {}) for b in ["DummyAgent", "PatientAgent", "PriceWarAgent"]]
+    opp += [(f"idle{i}", str(BUILTIN / "PatientAgent"), {}) for i in range(6)]
+    strong = [d for d in ["tight_v2", "tight_v3", "tight_v4", "davide_v3"] if (AGENTS_DIR / d / "agent.py").exists()]
+    opp += [(f"strong_{d}", str(AGENTS_DIR / d), {}) for d in strong]
+    i = 0
+    while len(opp) < n:
+        st = rng.choice(STYLES)
+        opp.append((f"R{i}_{st}", str(RIVAL), {"style": st, "seed": rng.randrange(999)}))
+        i += 1
+    return opp[:n]
 
 
 _CLASS_CACHE = {}
@@ -159,7 +180,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cand", action="append", default=[],
                     help="name=bundle_path[:k=v,...] (repeatable)")
-    ap.add_argument("--suite", default="all", help="official|random|crowd|self|all (comma-separated)")
+    ap.add_argument("--suite", default="all", help="official|random|crowd|self|portal|all (comma-separated)")
     ap.add_argument("--seeds", type=int, default=3, help="seeds per official scenario x lineup")
     ap.add_argument("--n", type=int, default=60, help="matches for random/crowd suites")
     ap.add_argument("--crowd", default="10,25", help="crowd sizes")
@@ -182,6 +203,11 @@ def main():
                 for s in range(args.seeds):
                     jobs.append((f"official:{name}", (load_raw(name), lineup(rng, kind, 0, cands),
                                                       cands, args.seed0 + s)))
+    if "portal" in suites:   # portal setting: 41 teams in one market, both tournament scenarios
+        for i in range(args.n):
+            scen = "default" if i % 2 == 0 else "default_extended_waves"
+            jobs.append((f"portal:{scen}", (load_raw(scen), lineup(rng, "portal", 0, cands),
+                                            cands, rng.randrange(10**6))))
     if "random" in suites:
         for i in range(args.n):
             jobs.append(("random", (random_market(rng), lineup(rng, "league", 0, cands),

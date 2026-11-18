@@ -25,8 +25,11 @@ from dme_simulator.simulation import DMESimulator  # noqa: E402
 import evaluate as ev  # noqa: E402
 
 
-def field(kind, agent_path):
+def field(kind, agent_path, seed=0):
     A = ROOT / "src/dme_simulator/agents"
+    if kind == "portal":    # 41 teams in one default market, like the official leaderboard
+        import random
+        return ev.portal_field(random.Random(seed), 40)
     if kind == "small":     # the local default roster
         return [("Dummy", str(ev.BUILTIN / "DummyAgent"), {}), ("Patient", str(ev.BUILTIN / "PatientAgent"), {}),
                 ("PriceWar", str(ev.BUILTIN / "PriceWarAgent"), {})]
@@ -49,7 +52,7 @@ def main():
 
     cfg = load_config(a.config)
     agents = {"ME": ev.make_agent(a.agent, {})}
-    for tid, p, kw in field(a.field, a.agent):
+    for tid, p, kw in field(a.field, a.agent, a.seed):
         agents[tid] = ev.make_agent(p, kw)
     sim = DMESimulator(list(agents), cfg, seed=a.seed)
     gc = cfg.goods
@@ -109,8 +112,13 @@ def main():
     rank = 1 + sum(1 for t in caps if caps[t] > caps["ME"])
     print(f"\n== {Path(a.agent).name} | {Path(a.config).stem} | field={a.field} ({len(caps)} teams) | seed {a.seed}")
     print(f"final capital {caps['ME']:,.0f} (start {cfg.initial_state.starting_capital:,.0f}) -> rank {rank}/{len(caps)}")
-    top = sorted(caps.items(), key=lambda kv: -kv[1])[:5]
-    print("top 5: " + ", ".join(f"{t} {c:,.0f}" for t, c in top))
+    top = sorted(caps.items(), key=lambda kv: -kv[1])
+    print("top 5: " + ", ".join(f"{t} {c:,.0f}" for t, c in top[:5]))
+    if len(caps) > 12:
+        vals = sorted(caps.values(), reverse=True)
+        n_above = sum(1 for v in vals if v > cfg.initial_state.starting_capital + 1e-6)
+        print(f"teams above start: {n_above}/{len(vals)} | median {vals[len(vals)//2]:,.0f} | "
+              f"capitals: " + " ".join(f"{v/1000:.1f}" for v in vals))
     spend = sum(r["spend"] for r in rows)
     rev = sum(r["revenue"] for r in rows)
     print(f"spend {spend:,.0f}  revenue {rev:,.0f}  (revenue/spend {rev / max(spend, 1):.2f})")
