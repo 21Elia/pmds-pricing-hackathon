@@ -28,17 +28,18 @@ class TightAgent(BaseAgent):
     explore_turns = 6           # wider ladder and faster moves early on
     step_up = 0.07
     step_down = 0.15
-    min_markup = 1.3            # never list below material cost * this
+    min_markup = 4.0            # never list below replacement cost * this (avoids price wars)
     # --- stock and production ---
-    min_stock = 2
+    min_stock = 6
     max_stock = 30
-    cover_turns = 3.0           # target stock = sales rate * cover + min_stock
+    cover_turns = 4.0           # target stock = sales rate * cover + min_stock
     # --- bidding ---
     bid_start = 1.5            # first bid = reserve * this
     bid_up = 1.5
     bid_down = 0.94
     value_share = 0.8          # max bid per material unit = share of product value
     budget_share = 0.8          # max share of capital committed per turn
+    max_bid_mult = 2.5          # never bid more than reserve * this
 
     def __init__(self) -> None:
         self.me: str | None = None
@@ -107,11 +108,12 @@ class TightAgent(BaseAgent):
                 continue
             sold_prices.setdefault(tx.good, []).extend([tx.price] * tx.quantity)
 
-        # material cost estimates (what we pay, else the reserve)
-        mat_cost = {
-            m: self.unit_cost.get(m, lots[m].reserve_price if m in lots else 1.0)
-            for m in gc.raw_materials
-        }
+        # replacement cost of each material: what a new unit costs now (the reserve).
+        # What we already paid is sunk and must not hold prices up.
+        for m in gc.raw_materials:
+            if m in lots:
+                self.unit_cost[m] = lots[m].reserve_price
+        mat_cost = {m: self.unit_cost.get(m, 1.0) for m in gc.raw_materials}
         # cheapest recipe per finished good
         recipe_for: dict[str, str] = {}
         good_cost: dict[str, float] = {}
@@ -204,6 +206,7 @@ class TightAgent(BaseAgent):
                     cap = max(cap, self.value_share * self.ref_price[g] / sum(rec.inputs.values()))
             level = self.bid_level.get(m, lot.reserve_price * self.bid_start)
             price = max(lot.reserve_price * 1.001, level)
+            price = min(price, lot.reserve_price * self.max_bid_mult)
             if cap > 0:
                 price = min(price, max(cap, lot.reserve_price * 1.001))
             qty = min(qty, int(budget // price))

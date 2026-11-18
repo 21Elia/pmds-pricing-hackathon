@@ -15,7 +15,8 @@ AGENT = ROOT / "src/dme_simulator/agents/tight/agent.py"
 FIELDS = {
     "builtins": [],
     "fixed": ["--extra", "sparring_fixed"],
-    "full": ["--extra", "sparring", "--extra", "sparring_fixed"],
+    "zoo": ["--config", "config/default.yaml", "--config", "config/scaled_market.yaml",
+            "--extra", "sparring_zoo", "--extra", "sparring_fixed"],
 }
 
 

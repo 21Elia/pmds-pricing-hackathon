@@ -8,3 +8,4 @@ outputs/
 
 # generated sparring copies (tools/make_sparring.py)
 sparring/
+sparring_zoo/
