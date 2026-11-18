@@ -107,6 +107,10 @@ PORTAL_EXTRA = {
     "zoo_early_a": dict(bid_mult=1.5, lo=5.0, hi=8.0, stock=2, split=False, crazy_turns=3, crazy_mult=8.0, crazy_stock=12),
     "zoo_early_b": dict(bid_mult=1.3, lo=3.0, hi=9.0, stock=3, split=False, crazy_turns=4, crazy_mult=6.0, crazy_stock=20),
     "zoo_early_c": dict(bid_mult=2.0, lo=4.0, hi=6.0, stock=4, split=True, crazy_turns=5, crazy_mult=5.0, crazy_stock=10),
+    # fast sellers like gabriele/valueforge on the portal: buy big early, sell cheap and fast
+    "zoo_fast_a": dict(bid_mult=1.5, lo=2.0, hi=2.5, stock=3, split=True, crazy_turns=2, crazy_mult=8.0, crazy_stock=15),
+    "zoo_fast_b": dict(bid_mult=1.3, lo=2.5, hi=3.0, stock=4, split=True, crazy_turns=4, crazy_mult=5.0, crazy_stock=12),
+    "zoo_fast_c": dict(bid_mult=2.0, lo=1.8, hi=2.2, stock=3, split=False, crazy_turns=3, crazy_mult=6.0, crazy_stock=10),
     "zoo_crazy3": dict(bid_mult=3.0, lo=2.0, hi=3.0, stock=5, split=True, crazy_turns=4, crazy_mult=4.0, crazy_stock=15),
 }
 DEFAULTS = dict(start_turn=0, crazy_turns=0, crazy_mult=1.0, crazy_stock=0)
