@@ -70,13 +70,32 @@ ZOO = {
 }
 
 
+def random_zoo(n: int, seed: int = 7) -> dict:
+    """Extra random opponents so the field is portal-sized (~30 teams)."""
+    import random
+    rng = random.Random(seed)
+    out = {}
+    for i in range(n):
+        lo = rng.choice([1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0])
+        out[f"zoo_r{i:02d}"] = dict(
+            bid_mult=round(rng.choice([1.05, 1.2, 1.5, 2.0, 3.0]), 2),
+            lo=lo, hi=round(lo * rng.choice([1.0, 1.0, 1.5, 2.5]), 2),
+            stock=rng.choice([1, 2, 3, 5, 8]),
+            split=rng.random() < 0.25,
+        )
+    return out
+
+
 def main() -> None:
+    import sys
     if OUT.exists():
         shutil.rmtree(OUT)
-    for i, (name, p) in enumerate(ZOO.items()):
+    zoo = dict(ZOO)
+    zoo.update(random_zoo(int(sys.argv[1]) if len(sys.argv) > 1 else 14))
+    for i, (name, p) in enumerate(zoo.items()):
         (OUT / name).mkdir(parents=True)
         (OUT / name / "agent.py").write_text(TEMPLATE.format(seed=i, **p))
-    print("written:", ", ".join(ZOO))
+    print(f"written {len(zoo)} zoo agents")
 
 
 if __name__ == "__main__":

@@ -1,22 +1,26 @@
-"""Try parameter sets for tight in several fields; print tight's mean rank per field.
+"""Try parameter sets for one agent folder; print its mean rank per field.
 
-Edits tight/agent.py in place for each candidate and restores the original at the end.
+  uv run python tools/sweep.py --agent tight_v3 --seeds 6 '[{}, {"open_bid": 4.0}]'
+
+Edits src/dme_simulator/agents/<agent>/agent.py in place for each candidate and
+restores the original at the end. All other bundles in agents/ play too.
+Fields: big = default + scaled_market with the 22-agent zoo (portal-sized);
+builtins = only the bundles in agents/.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-AGENT = ROOT / "src/dme_simulator/agents/tight/agent.py"
 FIELDS = {
-    "builtins": [],
-    "fixed": ["--extra", "sparring_fixed"],
-    "zoo": ["--config", "config/default.yaml", "--config", "config/scaled_market.yaml",
-            "--extra", "sparring_zoo", "--extra", "sparring_fixed"],
+    "big": ["--config", "config/default.yaml", "--config", "config/scaled_market.yaml",
+            "--extra", "sparring_zoo"],
+    "nozoo": [],
+    "auction": ["--config", "config/tutorial_auction.yaml"],
 }
 
 
@@ -27,28 +31,34 @@ def set_params(text: str, params: dict) -> str:
     return text
 
 
-def tight_rank(args: list[str], seeds: int) -> float:
+def ranks(team: str, args: list[str], seeds: int) -> str:
     out = subprocess.run(
         ["uv", "run", "python", "tools/arena.py", "--seeds", str(seeds), *args],
         cwd=ROOT, capture_output=True, text=True, check=True,
     ).stdout
     for line in out.splitlines():
-        if line.startswith("tight "):
-            return float(line.split()[1])
+        parts = line.split()
+        if parts and parts[0] == team:
+            return " ".join(parts[1:2] + parts[3:])
     raise RuntimeError(out)
 
 
 def main() -> None:
-    candidates = json.loads(sys.argv[1])
-    seeds = int(sys.argv[2]) if len(sys.argv) > 2 else 4
-    original = AGENT.read_text()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("candidates")
+    ap.add_argument("--agent", default="tight_v3")
+    ap.add_argument("--seeds", type=int, default=6)
+    ap.add_argument("--fields", default="big")
+    a = ap.parse_args()
+    path = ROOT / "src/dme_simulator/agents" / a.agent / "agent.py"
+    original = path.read_text()
     try:
-        for cand in candidates:
-            AGENT.write_text(set_params(original, cand))
-            ranks = {f: tight_rank(a, seeds) for f, a in FIELDS.items()}
-            print(f"{json.dumps(cand):<70} " + "  ".join(f"{f}={r:.2f}" for f, r in ranks.items()), flush=True)
+        for cand in json.loads(a.candidates):
+            path.write_text(set_params(original, cand))
+            res = {f: ranks(a.agent, FIELDS[f], a.seeds) for f in a.fields.split(",")}
+            print(f"{json.dumps(cand):<75} " + "  ".join(f"{f}: {r}" for f, r in res.items()), flush=True)
     finally:
-        AGENT.write_text(original)
+        path.write_text(original)
 
 
 if __name__ == "__main__":
